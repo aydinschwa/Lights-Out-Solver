@@ -1,7 +1,7 @@
 import pygame as pg
 import sys
 import random
-
+import numpy as np
 
 pg.init()
 screen_width = 500
@@ -20,7 +20,7 @@ class Game:
         for _ in range(n):
             to_add = []
             for _ in range(n):
-                to_add.append(0)
+                to_add.append(False)
             self.board.append(to_add)
 
     def draw_board(self):
@@ -40,13 +40,12 @@ class Game:
                     square_rect.x += x_offset
                     square_rect.y += y_offset
                     pg.draw.rect(screen, (0, 0, 150), square_rect, 1)
-                    pg.draw.circle(screen, (150, 0, 0), square_rect.center, 20)
+                    pg.draw.circle(screen, (150, 0, 0), square_rect.center, square_rect_width // 2.5)
                     x_offset += square_rect_width
                 else:
                     square_rect.x += x_offset
                     square_rect.y += y_offset
                     pg.draw.rect(screen, (0, 0, 150), square_rect, 1)
-                    pg.draw.circle(screen, (0, 150, 0), square_rect.center, 20)
                     x_offset += square_rect_width
 
     def change_lights(self, row, col):
@@ -72,9 +71,48 @@ class Game:
     def start(self):
         for row in range(self.size):
             for col in range(self.size):
-                switch = random.randint(0, 100) > 15
+                switch = random.randint(0, 100) < 15
                 if switch:
                     self.change_lights(row, col)
+
+    def check_win(self):
+        for row in self.board:
+            if sum(row) > 0:
+                return False
+        return True
+
+    def solve(self):
+        move_matrix = []
+        n = self.size
+        for i in range(n * n):
+            to_add = []
+            for j in range(n * n):
+                to_add.append(0)
+            move_matrix.append(np.array(to_add))
+
+        for col in range(n * n):
+            for row in range(n * n):
+                if row == col:
+                    move_matrix[row][col] = 1
+                    if row + 1 < n * n and col != n - 1:
+                        move_matrix[row + 1][col] = 1
+                    if row - 1 >= 0 and col % n != 0:
+                        move_matrix[row - 1][col] = 1
+                    if row + n < n * n:
+                        move_matrix[row + n][col] = 1
+                    if row - n >= 0:
+                        move_matrix[row - n][col] = 1
+
+        move_matrix = np.array(move_matrix)
+
+        # flatten nested list
+        curr_board = [num for row in self.board for num in row]
+
+        x = np.linalg.solve(move_matrix, curr_board)
+        x = [round(elem) % 2 for elem in x]
+        [print(f"Square {i + 1}") for i, square in enumerate(x) if square]
+        print(x)
+        return x
 
 
 game = Game(5)
@@ -88,6 +126,15 @@ while True:
         elif event.type == pg.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pg.mouse.get_pos()
             game.update_board(mouse_x, mouse_y)
+        elif event.type == pg.KEYDOWN:
+            if event.key == pg.K_SPACE:
+                ans_list = game.solve()
 
+    if game.check_win():
+        game.draw_board()
+        pg.display.update()
+        print('noice')
+        pg.time.delay(3000)
+        game.start()
     game.draw_board()
     pg.display.update()
