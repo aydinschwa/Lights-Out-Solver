@@ -5,11 +5,13 @@ import numpy as np
 
 pg.init()
 screen_width = 500
-screen_height = 500
-bg_rect_width = screen_width - 150
-bg_rect_height = screen_height - 150
+screen_height = 600
+bg_rect_width = int(screen_width * (5/6))
+bg_rect_height = int(screen_width * (5/6))
 
 screen = pg.display.set_mode((screen_width, screen_height))
+title_font = pg.font.SysFont("Verdana", 60)
+game_font = pg.font.SysFont("Verdana", 15)
 pg.display.set_caption("Lights Out")
 
 
@@ -24,9 +26,19 @@ class Game:
             self.board.append(to_add)
 
     def draw_board(self):
+        title = title_font.render("Lights Out", True, (0, 0, 0))
+        title_rect = title.get_rect(center=(screen_width // 2, screen_height // 12))
+        screen.blit(title, title_rect)
+
         bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
         bg_rect.center = (screen_width // 2, screen_height // 2)
         pg.draw.rect(screen, (0, 0, 0), bg_rect)
+
+        restart_rect = pg.Rect(bg_rect.topleft[0], bg_rect.bottomleft[1] + 20, 100, 50)
+        restart_word = game_font.render("Reset Game", True, (0, 0, 0))
+        restart_word_rect = restart_word.get_rect(center=restart_rect.center)
+        pg.draw.rect(screen, (255, 255, 255), restart_rect)
+        screen.blit(restart_word, restart_word_rect)
 
         for i, row in enumerate(self.board):
             y_offset = (bg_rect_height // self.size) * i
@@ -50,28 +62,29 @@ class Game:
 
     def change_lights(self, row, col):
         self.board[row][col] = not self.board[row][col]
-        if row < 4:
+        if row < self.size - 1:
             self.board[row + 1][col] = not self.board[row + 1][col]
         if row > 0:
             self.board[row - 1][col] = not self.board[row - 1][col]
-        if col < 4:
+        if col < self.size - 1:
             self.board[row][col + 1] = not self.board[row][col + 1]
         if col > 0:
             self.board[row][col - 1] = not self.board[row][col - 1]
 
     def update_board(self, x, y):
-        # TODO: figure out how to actually make clicks work with arbitrary board size
-        x_offset = (screen_width - bg_rect_width) // 2
-        y_offset = (screen_height - bg_rect_height) // 2
-        board_x = (x // x_offset) - 1
-        board_y = (y // y_offset) - 1
-        if board_x <= 4 and board_y <= 4:
+        bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
+        bg_rect.center = (screen_width // 2, screen_height // 2)
+
+        board_x = (x - bg_rect.topleft[0]) // (bg_rect_width // self.size)
+        board_y = (y - bg_rect.topleft[1]) // (bg_rect_height // self.size)
+
+        if (board_x >= 0) and (board_x < self.size) and (board_y >= 0) and (board_y < self.size):
             self.change_lights(board_y, board_x)
 
     def start(self):
         for row in range(self.size):
             for col in range(self.size):
-                switch = random.randint(0, 100) < 15
+                switch = random.randint(0, 100) < 45
                 if switch:
                     self.change_lights(row, col)
 
@@ -115,8 +128,10 @@ class Game:
         return x
 
 
-game = Game(5)
+game = Game(6)
 game.start()
+win = False
+now = 0
 while True:
     screen.fill((112, 128, 144))
     for event in pg.event.get():
@@ -126,15 +141,30 @@ while True:
         elif event.type == pg.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pg.mouse.get_pos()
             game.update_board(mouse_x, mouse_y)
+
+            bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
+            bg_rect.center = (screen_width // 2, screen_height // 2)
+
+            restart_rect = pg.Rect(bg_rect.topleft[0], bg_rect.bottomleft[1] + 20, 100, 50)
+
+            if restart_rect.collidepoint(mouse_x, mouse_y):
+                game.start()
+
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE:
                 ans_list = game.solve()
 
-    if game.check_win():
+    if game.check_win() and not win:
         game.draw_board()
         pg.display.update()
         print('noice')
-        pg.time.delay(3000)
+        win = True
+        now = pg.time.get_ticks()
+
+    # I'm sure there's a better way to wait a few seconds after winning, but idk
+    if win and (pg.time.get_ticks() - now > 3000):
+        win = False
         game.start()
+
     game.draw_board()
     pg.display.update()
