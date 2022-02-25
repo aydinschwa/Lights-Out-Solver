@@ -84,7 +84,7 @@ class Game:
     def start(self):
         for row in range(self.size):
             for col in range(self.size):
-                switch = random.randint(0, 100) < 45
+                switch = random.randint(0, 100) < 35
                 if switch:
                     self.change_lights(row, col)
 
@@ -128,7 +128,7 @@ class Game:
         return x
 
 
-game = Game(6)
+game = Game(5)
 game.start()
 win = False
 now = 0
