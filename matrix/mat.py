@@ -105,7 +105,18 @@ def add(A, B):
     True
     """
     assert A.D == B.D
-    pass
+    out_dict = {}
+    for row, col in A.f:
+        if (row, col) in B.f:
+            out_dict[row, col] = A.f[row, col] + B.f[row, col]
+        elif A.f[row, col]:
+            out_dict[row, col] = A.f[row, col]
+    for row, col in B.f:
+        if (row, col) not in A.f and B.f[row, col]:
+            out_dict[row, col] = B.f[row, col]
+
+
+    return Mat(A.D, out_dict)
 
 
 def scalar_mul(M, x):
@@ -163,7 +174,14 @@ def vector_matrix_mul(v, M):
     True
     """
     assert M.D[0] == v.D
-    pass
+    out = {}
+    for row in M.D[1]:
+        to_add = 0
+        for col in M.D[0]:
+            if (row, col) in M.f:
+                to_add += v.f[row] * M.f[row, col]
+        out[row] = to_add
+    return Vec(M.D[1], out)
 
 
 def matrix_vector_mul(M, v):
@@ -191,7 +209,14 @@ def matrix_vector_mul(M, v):
     True
     """
     assert M.D[1] == v.D
-    pass
+    out = {}
+    for row in M.D[0]:
+        to_add = 0
+        for col in M.D[1]:
+            if (row, col) in M.f:
+                to_add += M.f[row, col]*v.f[col]
+        out[row] = to_add
+    return Vec(M.D[0], out)
 
 
 def matrix_matrix_mul(A, B):
@@ -221,7 +246,16 @@ def matrix_matrix_mul(A, B):
     True
     """
     assert A.D[1] == B.D[0]
-    pass
+    out = {}
+    for col_b in B.D[1]:
+        for row in A.D[0]:
+            to_add = 0
+            for col in A.D[1]:
+                if (row, col) in A.f and (col, col_b) in B.f:
+                    to_add += A.f[row, col] * B.f[col, col_b]
+            out[row, col_b] = to_add
+
+    return Mat((A.D[0], B.D[1]), out)
 
 
 ################################################################################
