@@ -27,21 +27,45 @@ class Game:
 
         self.solution_vector = [0] * (n * n)
 
-    def draw_board(self):
+    @staticmethod
+    def _draw_title():
         title = title_font.render("Lights Out", True, (0, 0, 0))
         title_rect = title.get_rect(center=(screen_width // 2, screen_height // 12))
         screen.blit(title, title_rect)
 
+    @staticmethod
+    def draw_buttons():
+
         bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
         bg_rect.center = (screen_width // 2, screen_height // 2)
-        pg.draw.rect(screen, (0, 0, 0), bg_rect)
 
-        restart_rect = pg.Rect(bg_rect.topleft[0], bg_rect.bottomleft[1] + 20, 100, 50)
+        restart_rect = pg.Rect(bg_rect.topleft[0] - 5, bg_rect.bottomleft[1] + 20, 100, 50)
         restart_word = game_font.render("Reset Game", True, (0, 0, 0))
         restart_word_rect = restart_word.get_rect(center=restart_rect.center)
         pg.draw.rect(screen, (255, 255, 255), restart_rect)
         screen.blit(restart_word, restart_word_rect)
 
+        reference_x = restart_rect.topleft[0] + 115
+        reference_y = bg_rect.bottomleft[1] + 20
+        board_size_rects = []
+        for i in range(4, 9):
+            board_size_rect = pg.Rect(reference_x, reference_y, 50, 50)
+            board_size_word = game_font.render(f"{i} x {i}", True, (0, 0, 0))
+            board_size_word_rect = board_size_word.get_rect(center=board_size_rect.center)
+            pg.draw.rect(screen, (255, 255, 255), board_size_rect)
+            screen.blit(board_size_word, board_size_word_rect)
+            reference_x += 65
+            board_size_rects.append(board_size_rect)
+
+        return restart_rect, board_size_rects
+
+    def _draw_board(self):
+        # draw background
+        bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
+        bg_rect.center = (screen_width // 2, screen_height // 2)
+        pg.draw.rect(screen, (0, 0, 0), bg_rect)
+
+        # draw board
         for i, row in enumerate(self.board):
             y_offset = (bg_rect_height // self.size) * i
             x_offset = 0
@@ -57,20 +81,26 @@ class Game:
                     pg.draw.rect(screen, (0, 0, 150), square_rect, 1)
                     pg.draw.circle(screen, (150, 0, 0), square_rect.center, square_rect_width // 2.5)
                     if self.solution_vector[grid_pos]:
-                        hint_rect = square_rect.topright
-                        hint_rect = (hint_rect[0] - square_rect_width // 10, hint_rect[1] + square_rect_width // 10)
-                        pg.draw.circle(screen, (255, 223, 0), hint_rect, square_rect_width // 10)
+                        hint_rect = square_rect.center
+                        pg.draw.circle(screen, (0, 223, 0), hint_rect, square_rect_width // 10)
 
                 else:
                     square_rect.x += x_offset
                     square_rect.y += y_offset
                     pg.draw.rect(screen, (0, 0, 150), square_rect, 1)
                     if self.solution_vector[grid_pos]:
-                        hint_rect = square_rect.topright
-                        hint_rect = (hint_rect[0] - square_rect_width // 10, hint_rect[1] + square_rect_width // 10)
-                        pg.draw.circle(screen, (255, 223, 0), hint_rect, square_rect_width // 10)
+                        hint_rect = square_rect.center
+                        pg.draw.circle(screen, (0, 223, 0), hint_rect, square_rect_width // 10)
 
                 x_offset += square_rect_width
+
+    def draw_game(self):
+
+        self._draw_title()
+
+        self._draw_board()
+
+        self.draw_buttons()
 
     def change_lights(self, row, col):
         self.board[row][col] = not self.board[row][col]
@@ -96,6 +126,7 @@ class Game:
             self.change_lights(board_y, board_x)
 
     def start(self):
+        self.solution_vector = [0] * (self.size * self.size)
         for row in range(self.size):
             for col in range(self.size):
                 switch = random.randint(0, 100) < 35
@@ -178,7 +209,7 @@ class Game:
                     self.change_lights(i, j)
 
 
-game = Game(5)
+game = Game(4)
 game.start()
 win = False
 now = 0
@@ -192,13 +223,17 @@ while True:
             mouse_x, mouse_y = pg.mouse.get_pos()
             game.update_board(mouse_x, mouse_y)
 
-            bg_rect = pg.Rect(0, 0, bg_rect_width, bg_rect_height)
-            bg_rect.center = (screen_width // 2, screen_height // 2)
-
-            restart_rect = pg.Rect(bg_rect.topleft[0], bg_rect.bottomleft[1] + 20, 100, 50)
+            restart_rect, size_rects = game.draw_buttons()
 
             if restart_rect.collidepoint(mouse_x, mouse_y):
                 game.start()
+
+            board_size = 4
+            for rect in size_rects:
+                if rect.collidepoint(mouse_x, mouse_y) and game.size != board_size:
+                    game = Game(board_size)
+                    game.start()
+                board_size += 1
 
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_SPACE:
@@ -207,9 +242,8 @@ while True:
                 game.use_solution_vector()
 
     if game.check_win() and not win:
-        game.draw_board()
+        game.draw_game()
         pg.display.update()
-        print('noice')
         win = True
         now = pg.time.get_ticks()
 
@@ -218,5 +252,5 @@ while True:
         win = False
         game.start()
 
-    game.draw_board()
+    game.draw_game()
     pg.display.update()
